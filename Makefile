@@ -1,43 +1,25 @@
 #!/bin/bash
 
-APP_NAME=webbox
-DATE=`date "+%Y_%m_%d"`
-VERSION=`git tag | tail -n 1`
+SUBDIRS := ./frontend ./backend
 
-run: main.go version.go
-	go run $^
+RECURSIVE_DOWNLOAD_DEPENDENCE := @for subdir in $(SUBDIRS); \
+				   do \
+				   ( cd $$subdir && make download-dependence ) || exit 1; \
+				   done
 
-build:
-	rm -f ./webbox_*
-	echo "package main" > version.go
-	echo "const VERSION string = \"${VERSION}\"" >> version.go
-	go build -o ${APP_NAME}_${VERSION}_${DATE}
+RECURSIVE_MAKE := @for subdir in $(SUBDIRS); \
+				  do \
+				  make -C $$subdir || exit 1; \
+				  done
 
-build-realse:
-	rm -f ./webbox_*
-	echo "package main" > version.go
-	echo "const VERSION string = \"${VERSION}\"" >> version.go
-	go build -ldflags "-s -w" -o ${APP_NAME}_${VERSION}_${DATE}
+RECURSIVE_CLEAN := @for subdir in $(SUBDIRS); \
+				   do \
+				   ( cd $$subdir && make clean ) || exit 1; \
+				   done
 
-build-arm:
-	echo "package main" > version.go
-	echo "const VERSION string = \"${VERSION}\"" >> version.go
-	env GOOS=linux GOARCH=arm go build -ldflags "-s -w" -o ${APP_NAME}_arm_${VERSION}_${DATE}
+all:
+	$(RECURSIVE_DOWNLOAD_DEPENDENCE)
+	$(RECURSIVE_MAKE)
 
-gen_denpendence:
-	go mod tidy
-
-download-dependence:
-	go mod download
-
-import-dependence:
-	go mod vendor
-
-gen-cert:
-	cd cert && mkcert -install && mkcert localhost 127.0.0.1 ::1&& mv localhost+2-key.pem key.pem && mv localhost+2.pem cert.pem
-
-ping:
-	curl "http://localhost:8002/ping"
-
-ping-tls:
-	curl "https://localhost:8002/ping"
+clean:
+	$(RECURSIVE_CLEAN)

@@ -2,6 +2,7 @@ package token
 
 import (
 	"fmt"
+    "log"
 	"github.com/google/uuid"
 	"sync"
 	"time"
@@ -17,6 +18,14 @@ func GetToken() string {
 	timestamp := time.Now().Local().Unix()
 	tokenMap[token] = timestamp
 	return token
+}
+
+func UpdateTokenTimestamp(token string)  {
+	mutex.Lock()
+	defer mutex.Unlock()
+	if _, ok := tokenMap[token]; ok {
+        tokenMap[token] = time.Now().Local().Unix()
+	}
 }
 
 func DelToken(token string) {
@@ -45,7 +54,7 @@ func ClearTimeoutToken(duration int64) {
 	}
 
 	for _, token := range timeoutToken {
-        fmt.Println(token)
+        log.Println("delete timeout token: ", token)
 		delete(tokenMap, token)
 	}
 }

@@ -10,14 +10,16 @@ type Config struct {
 	ListenAddr    string
 	TestMode      bool
 	EnableTLS     bool
+	CanDelete     bool
 	TokenDuration int64
+	RootPath      string
 }
 
 const DB_BAME string = "webbox.db"
 
 var ConfPath, DBPath, CertFile, KeyFile string
 
-var AppConf Config = Config{ListenAddr: ":8002", TestMode: false, EnableTLS: false, TokenDuration: 900}
+var AppConf Config = Config{ListenAddr: ":8002", TestMode: false, EnableTLS: false, CanDelete: false, TokenDuration: 900, RootPath: "/tmp/test"}
 
 func Init() {
 	home, e := os.LookupEnv("HOME")

@@ -1,13 +1,15 @@
 package svr
 
 import (
+	"errors"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"local/config"
 	"local/middlewares"
-    "local/token"
+	"local/token"
 	"log"
-    "time"
+	"path/filepath"
+	"time"
 )
 
 type routerCb func(gin.IRouter)
@@ -23,17 +25,17 @@ func Start() {
 		r.Use(cb)
 	}
 
-	rcbs := []routerCb{ping, login, catalog}
+	rcbs := []routerCb{ping, login, catalog, upload, download, mkdir, deldir, delfile}
 	for _, cb := range rcbs {
 		cb(r)
 	}
 
-    go func() {
-        for {
-            token.ClearTimeoutToken(config.AppConf.TokenDuration);
-            time.Sleep(5 * time.Minute)
-        }
-    }()
+	go func() {
+		for {
+			token.ClearTimeoutToken(config.AppConf.TokenDuration)
+			time.Sleep(5 * time.Minute)
+		}
+	}()
 
 	if config.AppConf.EnableTLS {
 		if err := r.RunTLS(config.AppConf.ListenAddr, config.CertFile, config.KeyFile); err != nil {
@@ -49,4 +51,19 @@ func Start() {
 
 func errorBody(err error) gin.H {
 	return gin.H{"code": -1, "error": fmt.Sprintf("%v", err)}
+}
+
+func getAbsPath(filename string) (string, error) {
+	path := config.AppConf.RootPath + filename
+	log.Println(path)
+	apath, err := filepath.Abs(path)
+	if err != nil {
+		return "", err
+	}
+
+	if !filepath.HasPrefix(apath, config.AppConf.RootPath) {
+		return "", errors.New("Invalid filename: " + filename)
+	}
+
+	return apath, nil
 }

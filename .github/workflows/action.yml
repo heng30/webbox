@@ -20,6 +20,5 @@ jobs:
             go-version: '>=1.19.0'
       - run: go version
       - run: echo "end install Go..."
-      - run: make download-dependence
-      - run: make build
+      - run: make
       - run: echo "🍏 This job's status is ${{ job.status }}."
