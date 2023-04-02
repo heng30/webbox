@@ -1,7 +1,6 @@
 package svr
 
 import (
-	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"net/http"
 	"os"
@@ -45,13 +44,7 @@ func catalog(r gin.IRouter) {
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, errorBody(err))
 		} else {
-			jsonBytes, err := json.Marshal(infos)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, errorBody(err))
-				return
-			}
-
-			c.JSON(http.StatusOK, gin.H{"code": 0, "data": string(jsonBytes)})
+			c.JSON(http.StatusOK, gin.H{"code": 0, "data": infos})
 		}
 	})
 }

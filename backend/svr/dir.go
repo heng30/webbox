@@ -1,14 +1,12 @@
 package svr
 
 import (
-	"encoding/json"
 	"errors"
 	"github.com/gin-gonic/gin"
 	"io/ioutil"
 	"local/config"
 	"net/http"
 	"os"
-    "log"
 )
 
 func mkdir(r gin.IRouter) {
@@ -70,22 +68,14 @@ func readdir(r gin.IRouter) {
 		}
 
 		for _, file := range files {
-            path := file.Name();
-            log.Println(path)
+			path := file.Name()
 			if file.IsDir() {
 				infos = append(infos, catalogInfo{1, path, 0})
 			} else {
 				infos = append(infos, catalogInfo{0, path, file.Size()})
 			}
-
 		}
 
-		jsonBytes, err := json.Marshal(infos)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, errorBody(err))
-			return
-		}
-
-		c.JSON(http.StatusOK, gin.H{"code": 0, "data": string(jsonBytes)})
+		c.JSON(http.StatusOK, gin.H{"code": 0, "data": infos})
 	})
 }
