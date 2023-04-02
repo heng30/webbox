@@ -5,11 +5,17 @@ VERSION=`git tag | tail -n 1`
 
 all: build-release
 
+run:
+	npm run dev
+
+format:
+	npm run format
+
 build-release:
 	@echo "todo"
 
 download-dependence:
-	@echo "todo"
+	npm install
 
 clean:
 	@echo "todo"

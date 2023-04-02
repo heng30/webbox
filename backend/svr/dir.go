@@ -1,11 +1,14 @@
 package svr
 
 import (
+	"encoding/json"
 	"errors"
 	"github.com/gin-gonic/gin"
+	"io/ioutil"
 	"local/config"
 	"net/http"
 	"os"
+    "log"
 )
 
 func mkdir(r gin.IRouter) {
@@ -47,5 +50,42 @@ func deldir(r gin.IRouter) {
 		}
 
 		c.JSON(http.StatusOK, gin.H{"code": 0})
+	})
+}
+
+func readdir(r gin.IRouter) {
+	r.GET("/readdir", func(c *gin.Context) {
+		infos := []catalogInfo{}
+		path, _ := c.GetQuery("dirname")
+		apath, err := getAbsPath(path)
+		if err != nil {
+			c.JSON(http.StatusBadRequest, errorBody(err))
+			return
+		}
+
+		files, err := ioutil.ReadDir(apath)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, errorBody(err))
+			return
+		}
+
+		for _, file := range files {
+            path := file.Name();
+            log.Println(path)
+			if file.IsDir() {
+				infos = append(infos, catalogInfo{1, path, 0})
+			} else {
+				infos = append(infos, catalogInfo{0, path, file.Size()})
+			}
+
+		}
+
+		jsonBytes, err := json.Marshal(infos)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, errorBody(err))
+			return
+		}
+
+		c.JSON(http.StatusOK, gin.H{"code": 0, "data": string(jsonBytes)})
 	})
 }

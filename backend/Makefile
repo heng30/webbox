@@ -59,6 +59,9 @@ download:
 upload:
 	curl -v -H ${Auth_Token} -X POST -F 'file=@main.go' "http://localhost:8002/upload?filename=/main.go"
 
+readdir:
+	curl -v -H ${Auth_Token} "http://localhost:8002/readdir?dirname=/"
+
 mkdir:
 	curl -v -H ${Auth_Token} "http://localhost:8002/mkdir?dirname=/foo/bar"
 
