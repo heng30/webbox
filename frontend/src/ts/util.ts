@@ -1,5 +1,5 @@
 
-const PrettyFileSize = (bytes: Number) => {
+const PrettyFileSize = (bytes: number) => {
     const K = 1024;
     const M = 1024 * K;
     const G = 1024 * M;
@@ -7,11 +7,11 @@ const PrettyFileSize = (bytes: Number) => {
     if (bytes < K) {
         return `${bytes}B`
     } else if (bytes < M) {
-        return `${bytes}/${K}}K`
+        return (bytes/K).toFixed(2) + 'K';
     } else if (bytes < G) {
-        return `${bytes}/${M}M`
+        return (bytes/M).toFixed(2) + 'M';
     } else {
-        return `${bytes}/${G}G`
+        return (bytes/G).toFixed(2) + 'G';
     }
 }
 
