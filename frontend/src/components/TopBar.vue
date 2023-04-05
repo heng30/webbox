@@ -1,13 +1,6 @@
 <template>
-  <div
-    style="
-      margin: 0;
-      width: 100%;
-      height: 40px;
-      borderBottom: 2px solid steelblue;
-    "
-  >
-    <el-page-header>
+  <div style="margin: 0; width: 100%; borderbottom: 1px solid steelblue">
+    <el-page-header title="返回" @back="goBack">
       <template #content>
         <div style="display: flex">
           <el-breadcrumb :separator-icon="ArrowRight">
@@ -36,11 +29,10 @@ const handleClick = (index: number) => {
   if (index >= bitems.value.length - 1) return;
   bitems.value = bitems.value.slice(0, index + 1);
 };
-</script>
 
-<!-- defineProps({ -->
-<!--   msg: { -->
-<!--     type: String, -->
-<!--     required: true, -->
-<!--   }, -->
-<!-- }); -->
+const goBack = () => {
+  if (bitems.value.length <= 1) return;
+  bitems.value = bitems.value.slice(0, bitems.value.length - 1);
+};
+
+</script>

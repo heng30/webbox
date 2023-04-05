@@ -5,7 +5,7 @@ DATE=`date "+%Y_%m_%d"`
 VERSION=`git tag | tail -n 1`
 BUILD_PLATFORM=`uname -s`_`uname -m`
 PASSWORD=`echo -n "123456" | md5sum | awk '{print $$1}'`
-Auth_Token="Auth-Token: your-token"
+AuthToken="your-token"
 
 all: build-release
 
@@ -51,23 +51,27 @@ login:
 	curl -v "http://localhost:8002/login?username=test&&password=${PASSWORD}"
 
 catalog:
-	curl -v -H ${Auth_Token} "http://localhost:8002/catalog?path=/"
+	curl -v "http://localhost:8002/catalog?authtoken=${AuthToken}&&path=/"
 
 download:
-	curl -v -H ${Auth_Token} "http://localhost:8002/download?filename=/a.c" -o /tmp/a.c
+	curl -v "http://localhost:8002/download?authtoken=${AuthToken}&&filename=/a.c" -o /tmp/a.c
 
 upload:
-	curl -v -H ${Auth_Token} -X POST -F 'file=@main.go' "http://localhost:8002/upload?filename=/main.go"
+	curl -v "http://localhost:8002/upload?authtoken=${AuthToken}&&filename=/main.go"
 
 readdir:
-	curl -v -H ${Auth_Token} "http://localhost:8002/readdir?dirname=/"
+	curl -v "http://localhost:8002/readdir?authtoken=${AuthToken}&&dirname=/"
 
 mkdir:
-	curl -v -H ${Auth_Token} "http://localhost:8002/mkdir?dirname=/foo/bar"
+	curl -v "http://localhost:8002/mkdir?authtoken=${AuthToken}&&dirname=/foo/bar"
 
 deldir:
-	curl -v -H ${Auth_Token} "http://localhost:8002/deldir?dirname=/foo/bar"
+	curl -v "http://localhost:8002/deldir?authtoken=${AuthToken}&&dirname=/foo/bar"
 
 delfile:
-	curl -v -H ${Auth_Token} "http://localhost:8002/delfile?filename=/main.go"
+	curl -v "http://localhost:8002/delfile?authtoken=${AuthToken}&&filename=/main.go"
+
+configure:
+	curl -v "http://localhost:8002/configure?authtoken=${AuthToken}"
+
 

@@ -27,31 +27,33 @@
       />
       <el-table-column align="right" width="300">
         <template #header>
-          <el-input
-            v-model="search"
-            size="small"
-            placeholder="Type to search"
-          />
+          <el-input v-model="search" placeholder="搜索" clearable />
         </template>
         <template #default="scope">
-          <el-button
-            size="small"
-            type="primary"
-            @click="handleUpload(scope.$index, scope.row)"
-            >上传</el-button
+          <FileDialog
+            @accept="handleUpload"
+            v-if="scope.row.type === '目录'"
+            buttonLabel="上传"
+            :attach="scope.row"
           >
-          <el-button
-            size="small"
-            type="primary"
-            @click="handleDownload(scope.$index, scope.row)"
-            >下载</el-button
-          >
-          <el-button
-            size="small"
-            type="danger"
-            @click="handleDelete(scope.$index, scope.row)"
-            >删除</el-button
-          >
+          </FileDialog>
+          <el-button type="success" v-if="scope.row.type === '文件'">
+            <el-link
+              :underline="false"
+              :href="downloadUrl(scope.row)"
+              style="color: white"
+              >下载</el-link
+            >
+          </el-button>
+
+          <div style="margin: 0 10px; display: inline-block">
+            <el-button
+              v-if="canDelete"
+              type="danger"
+              @click="handleDelete(scope.$index, scope.row)"
+              >删除</el-button
+            >
+          </div>
         </template>
       </el-table-column>
     </el-table>
@@ -62,7 +64,9 @@
 import config from '../ts/config';
 import util from '../ts/util';
 import store from '../ts/store';
+import FileDialog from './cbase/FileDialog.vue';
 import { onMounted, computed, ref, watch } from 'vue';
+import { v4 as uuidv4 } from 'uuid';
 
 interface Catalog {
   type: string;
@@ -79,6 +83,7 @@ type Dictionary = {
 const tableData = ref([]);
 const search = ref('');
 const catalogCache: Dictionary = {};
+const canDelete = ref(false);
 
 const filterTableData = computed(() =>
   tableData.value.filter(
@@ -99,34 +104,95 @@ watch(store.CurrentPath, async (newp) => {
 });
 
 onMounted(async () => {
+  await updateConfig();
   await updateCatalog('/');
 });
 
-const handleDownload = (index: number, row: Catalog) => {
-  console.log(index, row);
+const handleUpload = async (file: any, row: Catalog) => {
+  const fileSize = file.size;
+  const chunkSize = 1024 * 1024;
+  let startByte: number = 0;
+  let chunkNumber: number = 0;
+
+  const uuid = uuidv4();
+  const uploadChunk = async (
+    endByte: number,
+    chunkNumber: number,
+    isEndChunk: boolean
+  ) => {
+    const totalPart = isEndChunk ? chunkNumber : -1;
+    const url = `${config.svraddr}/mupload?authtoken=${config.authtoken}&&uuid=${uuid}&&partindex=${chunkNumber}&&totalpart=${totalPart}&&filename=${row.path}/${file.name}`;
+
+    const chunk = file.slice(startByte, endByte);
+    const formData = new FormData();
+    formData.append('chunkNumber', String(chunkNumber));
+    formData.append('file', chunk);
+    try {
+      const resp = await fetch(url, { method: 'POST', body: formData });
+      const jdata = await resp.json();
+      if (jdata.code !== 0) {
+        throw new Error(`remote error: ${jdata.data}`);
+      }
+
+      startByte = endByte;
+      // console.log(`Chunk ${chunkNumber} uploaded successfully`);
+      return true;
+    } catch (err) {
+      console.log(err);
+      return false;
+    }
+  };
+
+  while (startByte < fileSize) {
+    const endByte = Math.min(startByte + chunkSize, fileSize);
+    const ret = await uploadChunk(endByte, ++chunkNumber, endByte == fileSize);
+    if (!ret) break;
+  }
+
+  updateCatalog(row.path, false);
 };
 
-const handleUpload = (index: number, row: Catalog) => {
-  console.log(index, row);
-};
+const handleDelete = async (_index: number, row: Catalog) => {
+  let url: string = '';
+  if (row.type == '目录') {
+    url = `${config.svraddr}/deldir?authtoken=${config.authtoken}&&dirname=${row.path}`;
+  } else {
+    url = `${config.svraddr}/delfile?authtoken=${config.authtoken}&&filename=${row.path}`;
+  }
 
-const handleDelete = (index: number, row: Catalog) => {
-  console.log(index, row);
-};
-
-const updateCatalog = async (path: string) => {
-  const url = `${config.svraddr}/readdir?dirname=${path}`;
-  console.log(url);
   try {
-    const res = await fetch(url, {
-      headers: {
-        Origin: '*',
-      },
-    });
-    if (!res.ok) {
-      throw new Error('Network response was not ok');
+    const res = await fetch(url);
+    let jdata = await res.json();
+    if (jdata.code !== 0) {
+      throw new Error(jdata.data);
     }
 
+    const path = util.GetParentPath(row.path);
+    updateCatalog(path);
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+const updateConfig = async () => {
+  const url = `${config.svraddr}/configure?authtoken=${config.authtoken}`;
+  try {
+    const res = await fetch(url);
+    let jdata = await res.json();
+    if (jdata.code !== 0) {
+      throw new Error(jdata.data);
+    }
+
+    canDelete.value = jdata.data.canDelete;
+  } catch (err) {
+    console.log(err);
+  }
+};
+
+const updateCatalog = async (path: string, isEnterPath: boolean = true) => {
+  const url = `${config.svraddr}/readdir?authtoken=${config.authtoken}&&dirname=${path}`;
+  try {
+    const res = await fetch(url);
     let jdata = await res.json();
     if (jdata.code !== 0) {
       throw new Error(jdata.data);
@@ -141,29 +207,44 @@ const updateCatalog = async (path: string) => {
       }
     });
 
-    tableData.value = [];
-    data.forEach((item) => {
-      tableData.value.push({
-        type: item.type === 0 ? '文件' : '目录',
-        name: item.path,
-        path: path === '/' ? `/${item.path}` : `${path}/${item.path}`,
-        size: item.type === 0 ? util.PrettyFileSize(item.size) : '--',
-        sizeBytes: item.size,
+    if (isEnterPath) {
+      tableData.value = [];
+      data.forEach((item) => {
+        tableData.value.push({
+          type: item.type === 0 ? '文件' : '目录',
+          name: item.path,
+          path: path === '/' ? `/${item.path}` : `${path}/${item.path}`,
+          size: item.type === 0 ? util.PrettyFileSize(item.size) : '--',
+          sizeBytes: item.size,
+        });
       });
-    });
 
-    if (path !== '/') {
-      store.CurrentPath.value = path.split('/');
+      if (path !== '/') {
+        store.CurrentPath.value = path.split('/');
+      }
+      store.CurrentPath.value[0] = '/';
+      catalogCache[path] = tableData.value;
+    } else {
+      let td = [];
+      data.forEach((item) => {
+        td.push({
+          type: item.type === 0 ? '文件' : '目录',
+          name: item.path,
+          path: path === '/' ? `/${item.path}` : `${path}/${item.path}`,
+          size: item.type === 0 ? util.PrettyFileSize(item.size) : '--',
+          sizeBytes: item.size,
+        });
+      });
+      catalogCache[path] = td;
     }
-    store.CurrentPath.value[0] = '/';
-    catalogCache[path] = tableData.value;
   } catch (err) {
-    console.log('Error:', err);
+    console.log(err);
   }
 };
 
-const handleClick = async (row: Catalog) => {
-  if (row.type === '文件') return;
+const handleClick = async (row: Catalog, column: any) => {
+  if (row.type === '文件' || column.no === 3) return;
+  search.value = '';
   if (!!catalogCache[row.path]) {
     store.CurrentPath.value = row.path.split('/');
     store.CurrentPath.value[0] = '/';
@@ -191,5 +272,9 @@ const sortBySize = (a: Catalog, b: Catalog) => {
   } else {
     return sortByType(a, b);
   }
+};
+
+const downloadUrl = (row: Catalog) => {
+  return `${config.svraddr}/download?authtoken=${config.authtoken}&&filename=${row.path}`;
 };
 </script>

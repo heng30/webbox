@@ -25,7 +25,7 @@ func Start() {
 		r.Use(cb)
 	}
 
-	rcbs := []routerCb{ping, login, catalog, upload, download, mkdir, readdir, deldir, delfile}
+	rcbs := []routerCb{ping, login, catalog, upload, mupload, download, mkdir, readdir, deldir, delfile, configure}
 	for _, cb := range rcbs {
 		cb(r)
 	}

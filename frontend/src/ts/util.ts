@@ -7,12 +7,21 @@ const PrettyFileSize = (bytes: number) => {
     if (bytes < K) {
         return `${bytes}B`
     } else if (bytes < M) {
-        return (bytes/K).toFixed(2) + 'K';
+        return (bytes/K).toFixed(0) + 'K';
     } else if (bytes < G) {
-        return (bytes/M).toFixed(2) + 'M';
+        return (bytes/M).toFixed(0) + 'M';
     } else {
         return (bytes/G).toFixed(2) + 'G';
     }
 }
 
-export default { PrettyFileSize }
+const  GetParentPath = (path: string) => {
+  let index = path.lastIndexOf('/')
+  if ( index < 0) {
+    return path;
+  }
+  if (index === 0) return '/'
+  return path.substring(0, index)
+}
+
+export default { PrettyFileSize, GetParentPath }

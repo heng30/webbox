@@ -32,6 +32,8 @@ func download(r gin.IRouter) {
 		c.Header("Content-Disposition", "attachment; filename="+filename)
 		c.Header("Content-Type", "application/octet-stream")
 		c.Header("Content-Length", fmt.Sprintf("%d", fileInfo.Size()))
+		c.Writer.WriteHeader(http.StatusOK)
+
 		_, err = io.Copy(c.Writer, file)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, errorBody(err))
