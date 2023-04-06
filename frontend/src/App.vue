@@ -6,6 +6,7 @@ import Catalog from './components/Catalog.vue';
 
 <template>
   <div :style="{ margin: 0, width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }">
+    <Login />
     <TopBar />
     <Catalog />
   </div>

@@ -1,6 +1,7 @@
 package middlewares
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"local/config"
 	"local/db"
@@ -11,34 +12,38 @@ import (
 
 func Auth(testMode bool) gin.HandlerFunc {
 	return func(c *gin.Context) {
-		method := c.Request.Method
-		if method == "GET" || method == "POST" {
-			rurl := c.Request.RequestURI
-			if testMode || rurl == "/ping" {
-			} else if strings.Contains(rurl, "/login") {
-				username, _ := c.GetQuery("username")
-				password, _ := c.GetQuery("password")
+		rurl := c.Request.RequestURI
+		if testMode || rurl == "/ping" {
+		} else if strings.Contains(rurl, "/login") {
+			username, _ := c.GetQuery("username")
+			password, _ := c.GetQuery("password")
 
-				if username == "" || password == "" {
-					c.AbortWithStatus(http.StatusNonAuthoritativeInfo)
-				}
-
-				if !validUser(username, password) {
-					c.AbortWithStatus(http.StatusNonAuthoritativeInfo)
-				}
-			} else {
-				token := c.Request.Header.Get("Auth-Token")
-				if token == "" {
-					c.AbortWithStatus(http.StatusNonAuthoritativeInfo)
-				}
-
-				if !validToken(token) {
-					c.AbortWithStatus(http.StatusNonAuthoritativeInfo)
-				}
+			if username == "" || password == "" {
+				c.JSON(http.StatusNonAuthoritativeInfo, gin.H{"code": -1, "data": "username or password is empety"})
+				c.AbortWithStatus(http.StatusNonAuthoritativeInfo)
+				return
 			}
-			c.Next()
+
+			if !validUser(username, password) {
+				c.JSON(http.StatusNonAuthoritativeInfo, gin.H{"code": -1, "data": fmt.Sprintf("username: %s or password: %s is wrong", username, password)})
+				c.AbortWithStatus(http.StatusNonAuthoritativeInfo)
+				return
+			}
+		} else {
+			token, _ := c.GetQuery("authtoken")
+			if token == "" {
+				c.JSON(http.StatusNonAuthoritativeInfo, gin.H{"code": -1, "data": "authtoken is empety"})
+				c.AbortWithStatus(http.StatusNonAuthoritativeInfo)
+				return
+			}
+
+			if !validToken(token) {
+				c.JSON(http.StatusNonAuthoritativeInfo, gin.H{"code": -1, "data": fmt.Sprintf("authtoken: %s does not exist", token)})
+				c.AbortWithStatus(http.StatusNonAuthoritativeInfo)
+				return
+			}
 		}
-		c.AbortWithStatus(http.StatusMethodNotAllowed)
+		c.Next()
 	}
 }
 

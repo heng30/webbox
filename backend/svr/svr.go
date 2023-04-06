@@ -17,7 +17,11 @@ type routerCb func(gin.IRouter)
 func Start() {
 	r := gin.Default()
 
-	mcbs := []gin.HandlerFunc{middlewares.Auth(config.AppConf.TestMode), middlewares.Cors()}
+	mcbs := []gin.HandlerFunc{
+		middlewares.Cors(),
+		middlewares.Method(),
+		middlewares.Auth(config.AppConf.TestMode),
+	}
 	if config.AppConf.EnableTLS {
 		mcbs = append(mcbs, middlewares.LoadTls(config.AppConf.ListenAddr))
 	}
@@ -50,7 +54,7 @@ func Start() {
 }
 
 func errorBody(err error) gin.H {
-	return gin.H{"code": -1, "error": fmt.Sprintf("%v", err)}
+	return gin.H{"code": -1, "data": fmt.Sprintf("%v", err)}
 }
 
 func getAbsPath(filename string) (string, error) {

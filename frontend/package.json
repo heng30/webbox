@@ -12,6 +12,7 @@
   "dependencies": {
     "element-plus": "^2.3.2",
     "uuid": "^9.0.0",
+    "js-md5": "^0.7.3",
     "vue": "^3.2.47"
   },
   "devDependencies": {

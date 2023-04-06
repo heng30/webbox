@@ -42,6 +42,7 @@
               :underline="false"
               :href="downloadUrl(scope.row)"
               style="color: white"
+              target="_blank"
               >下载</el-link
             >
           </el-button>
@@ -67,6 +68,7 @@ import store from '../ts/store';
 import FileDialog from './cbase/FileDialog.vue';
 import { onMounted, computed, ref, watch } from 'vue';
 import { v4 as uuidv4 } from 'uuid';
+import { ElMessage } from 'element-plus';
 
 interface Catalog {
   type: string;
@@ -84,6 +86,7 @@ const tableData = ref([]);
 const search = ref('');
 const catalogCache: Dictionary = {};
 const canDelete = ref(false);
+const authtoken = store.AuthToken;
 
 const filterTableData = computed(() =>
   tableData.value.filter(
@@ -103,9 +106,18 @@ watch(store.CurrentPath, async (newp) => {
   tableData.value = catalogCache[path];
 });
 
+watch(store.AuthToken, async (newp) => {
+  if (newp.length > 0) {
+    await updateConfig();
+    await updateCatalog('/');
+  }
+});
+
 onMounted(async () => {
+  /*
   await updateConfig();
   await updateCatalog('/');
+  */
 });
 
 const handleUpload = async (file: any, row: Catalog) => {
@@ -121,7 +133,7 @@ const handleUpload = async (file: any, row: Catalog) => {
     isEndChunk: boolean
   ) => {
     const totalPart = isEndChunk ? chunkNumber : -1;
-    const url = `${config.svraddr}/mupload?authtoken=${config.authtoken}&&uuid=${uuid}&&partindex=${chunkNumber}&&totalpart=${totalPart}&&filename=${row.path}/${file.name}`;
+    const url = `${config.svraddr}/mupload?authtoken=${authtoken.value}&&uuid=${uuid}&&partindex=${chunkNumber}&&totalpart=${totalPart}&&filename=${row.path}/${file.name}`;
 
     const chunk = file.slice(startByte, endByte);
     const formData = new FormData();
@@ -131,22 +143,41 @@ const handleUpload = async (file: any, row: Catalog) => {
       const resp = await fetch(url, { method: 'POST', body: formData });
       const jdata = await resp.json();
       if (jdata.code !== 0) {
-        throw new Error(`remote error: ${jdata.data}`);
+        throw new Error(jdata.data);
       }
 
+      store.UploadProgress.uploadedBytes += endByte - startByte;
       startByte = endByte;
-      // console.log(`Chunk ${chunkNumber} uploaded successfully`);
       return true;
     } catch (err) {
-      console.log(err);
+      ElMessage.error(`${err}`);
       return false;
     }
   };
 
+  store.UploadProgress.totalBytes += fileSize;
+
+  let ret = true;
   while (startByte < fileSize) {
     const endByte = Math.min(startByte + chunkSize, fileSize);
-    const ret = await uploadChunk(endByte, ++chunkNumber, endByte == fileSize);
-    if (!ret) break;
+    ret = await uploadChunk(endByte, ++chunkNumber, endByte == fileSize);
+    if (!ret) {
+      store.UploadProgress.uploadedBytes -= startByte;
+      store.UploadProgress.totalBytes -= fileSize;
+      break;
+    }
+  }
+
+  if (ret) {
+    ElMessage({
+      message: `上传${file.name}成功!`,
+      type: 'success',
+    });
+  }
+
+  if (store.UploadProgress.uploadedBytes === store.UploadProgress.totalBytes) {
+    store.UploadProgress.uploadedBytes = 0;
+    store.UploadProgress.totalBytes = 0;
   }
 
   updateCatalog(row.path, false);
@@ -155,9 +186,9 @@ const handleUpload = async (file: any, row: Catalog) => {
 const handleDelete = async (_index: number, row: Catalog) => {
   let url: string = '';
   if (row.type == '目录') {
-    url = `${config.svraddr}/deldir?authtoken=${config.authtoken}&&dirname=${row.path}`;
+    url = `${config.svraddr}/deldir?authtoken=${authtoken.value}&&dirname=${row.path}`;
   } else {
-    url = `${config.svraddr}/delfile?authtoken=${config.authtoken}&&filename=${row.path}`;
+    url = `${config.svraddr}/delfile?authtoken=${authtoken.value}&&filename=${row.path}`;
   }
 
   try {
@@ -169,13 +200,18 @@ const handleDelete = async (_index: number, row: Catalog) => {
 
     const path = util.GetParentPath(row.path);
     updateCatalog(path);
+
+    ElMessage({
+      message: `删除${row.name}成功!`,
+      type: 'success',
+    });
   } catch (err) {
-    console.log(err);
+    ElMessage.error(`${err}`);
   }
 };
 
 const updateConfig = async () => {
-  const url = `${config.svraddr}/configure?authtoken=${config.authtoken}`;
+  const url = `${config.svraddr}/configure?authtoken=${authtoken.value}`;
   try {
     const res = await fetch(url);
     let jdata = await res.json();
@@ -185,12 +221,12 @@ const updateConfig = async () => {
 
     canDelete.value = jdata.data.canDelete;
   } catch (err) {
-    console.log(err);
+    ElMessage.error(`${err}`);
   }
 };
 
 const updateCatalog = async (path: string, isEnterPath: boolean = true) => {
-  const url = `${config.svraddr}/readdir?authtoken=${config.authtoken}&&dirname=${path}`;
+  const url = `${config.svraddr}/readdir?authtoken=${authtoken.value}&&dirname=${path}`;
   try {
     const res = await fetch(url);
     let jdata = await res.json();
@@ -238,7 +274,7 @@ const updateCatalog = async (path: string, isEnterPath: boolean = true) => {
       catalogCache[path] = td;
     }
   } catch (err) {
-    console.log(err);
+    ElMessage.error(`${err}`);
   }
 };
 
@@ -275,6 +311,27 @@ const sortBySize = (a: Catalog, b: Catalog) => {
 };
 
 const downloadUrl = (row: Catalog) => {
-  return `${config.svraddr}/download?authtoken=${config.authtoken}&&filename=${row.path}`;
+  return `${config.svraddr}/download?authtoken=${authtoken.value}&&filename=${row.path}`;
+};
+
+const Mkdir = async (pdir: string, dirname: string) => {
+  const url = `${config.svraddr}/mkdir?authtoken=${authtoken.value}&&dirname=${dirname}`;
+
+  try {
+    const resp = await fetch(url);
+    const jdata = await resp.json();
+    if (jdata.code !== 0) {
+      throw new Error(jdata.data);
+    }
+
+    ElMessage({
+      message: `创建${dirname}成功!`,
+      type: 'success',
+    });
+
+    await updateCatalog(pdir);
+  } catch (err) {
+    ElMessage.error(`${err}`);
+  }
 };
 </script>

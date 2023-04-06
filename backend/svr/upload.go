@@ -66,6 +66,12 @@ func upload(r gin.IRouter) {
 			return
 		}
 
+		_, err = os.Stat(apath)
+		if !os.IsNotExist(err) {
+			c.JSON(http.StatusBadRequest, errorBody(errors.New(fmt.Sprintf("%s is exist!", apath))))
+			return
+		}
+
 		file, err := c.FormFile("file")
 		if err != nil {
 			c.JSON(http.StatusBadRequest, errorBody(err))
@@ -110,6 +116,14 @@ func mupload(r gin.IRouter) {
 		if err != nil {
 			c.JSON(http.StatusBadRequest, errorBody(err))
 			return
+		}
+
+		if partIndex == 1 {
+			_, err = os.Stat(apath)
+			if !os.IsNotExist(err) {
+				c.JSON(http.StatusBadRequest, errorBody(errors.New(fmt.Sprintf("%s is exist!", apath))))
+				return
+			}
 		}
 
 		file, err := c.FormFile("file")
