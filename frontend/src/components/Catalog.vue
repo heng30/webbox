@@ -1,5 +1,6 @@
 <template>
   <div style="overflow-y: scroll; height: calc(100vh - 50px)">
+    <RenameDialog :oldname="oldname" />
     <el-table
       :data="filterTableData"
       @row-click="handleClick"
@@ -30,6 +31,17 @@
           <el-input v-model="search" placeholder="搜索" clearable />
         </template>
         <template #default="scope">
+          <div
+            :style="{
+              marginRight: '10px',
+              display: 'inline',
+            }"
+          >
+            <el-button type="warning" @click="handleRename(scope.row)"
+              >重命名
+            </el-button>
+          </div>
+
           <FileDialog
             @accept="handleUpload"
             v-if="scope.row.type === '目录'"
@@ -37,6 +49,7 @@
             :attach="scope.row"
           >
           </FileDialog>
+
           <el-button type="success" v-if="scope.row.type === '文件'">
             <el-link
               :underline="false"
@@ -66,6 +79,8 @@ import config from '../ts/config';
 import util from '../ts/util';
 import store from '../ts/store';
 import FileDialog from './cbase/FileDialog.vue';
+import RenameDialog from './RenameDialog.vue';
+
 import { onMounted, computed, ref, watch } from 'vue';
 import { v4 as uuidv4 } from 'uuid';
 import { ElMessage } from 'element-plus';
@@ -87,6 +102,8 @@ const search = ref('');
 const catalogCache: Dictionary = {};
 const canDelete = ref(false);
 const authtoken = store.AuthToken;
+const oldname = ref('');
+const isShowRenameDialog = store.IsShowRenameDialog;
 
 const filterTableData = computed(() =>
   tableData.value.filter(
@@ -114,17 +131,21 @@ watch(store.AuthToken, async (newp) => {
 });
 
 onMounted(async () => {
-  /*
-  await updateConfig();
-  await updateCatalog('/');
-  */
+  store.GlobalFunc['mkdir'] = mkdir;
+  store.GlobalFunc['rename'] = rename;
 });
+
+const handleRename = async (row: Catalog) => {
+  oldname.value = row.path;
+  isShowRenameDialog.value = true;
+};
 
 const handleUpload = async (file: any, row: Catalog) => {
   const fileSize = file.size;
   const chunkSize = 1024 * 1024;
   let startByte: number = 0;
   let chunkNumber: number = 0;
+  let status = -1;
 
   const uuid = uuidv4();
   const uploadChunk = async (
@@ -141,6 +162,8 @@ const handleUpload = async (file: any, row: Catalog) => {
     formData.append('file', chunk);
     try {
       const resp = await fetch(url, { method: 'POST', body: formData });
+      status = resp.status;
+
       const jdata = await resp.json();
       if (jdata.code !== 0) {
         throw new Error(jdata.data);
@@ -173,17 +196,26 @@ const handleUpload = async (file: any, row: Catalog) => {
       message: `上传${file.name}成功!`,
       type: 'success',
     });
+
+    updateCatalog(row.path, false);
   }
 
-  if (store.UploadProgress.uploadedBytes === store.UploadProgress.totalBytes) {
-    store.UploadProgress.uploadedBytes = 0;
-    store.UploadProgress.totalBytes = 0;
-  }
+  setTimeout(() => {
+    if (
+      store.UploadProgress.uploadedBytes === store.UploadProgress.totalBytes
+    ) {
+      store.UploadProgress.uploadedBytes = 0;
+      store.UploadProgress.totalBytes = 0;
+    }
+  }, 1000);
 
-  updateCatalog(row.path, false);
+  if (status === 203) {
+    store.AuthToken.value = '';
+  }
 };
 
 const handleDelete = async (_index: number, row: Catalog) => {
+  let status = -1;
   let url: string = '';
   if (row.type == '目录') {
     url = `${config.svraddr}/deldir?authtoken=${authtoken.value}&&dirname=${row.path}`;
@@ -193,6 +225,7 @@ const handleDelete = async (_index: number, row: Catalog) => {
 
   try {
     const res = await fetch(url);
+    status = res.status;
     let jdata = await res.json();
     if (jdata.code !== 0) {
       throw new Error(jdata.data);
@@ -208,12 +241,18 @@ const handleDelete = async (_index: number, row: Catalog) => {
   } catch (err) {
     ElMessage.error(`${err}`);
   }
+
+  if (status === 203) {
+    store.AuthToken.value = '';
+  }
 };
 
 const updateConfig = async () => {
+  let status = -1;
   const url = `${config.svraddr}/configure?authtoken=${authtoken.value}`;
   try {
     const res = await fetch(url);
+    status = res.status;
     let jdata = await res.json();
     if (jdata.code !== 0) {
       throw new Error(jdata.data);
@@ -223,12 +262,19 @@ const updateConfig = async () => {
   } catch (err) {
     ElMessage.error(`${err}`);
   }
+
+  if (status === 203) {
+    store.AuthToken.value = '';
+  }
 };
 
 const updateCatalog = async (path: string, isEnterPath: boolean = true) => {
+  let status = -1;
   const url = `${config.svraddr}/readdir?authtoken=${authtoken.value}&&dirname=${path}`;
+
   try {
     const res = await fetch(url);
+    status = res.status;
     let jdata = await res.json();
     if (jdata.code !== 0) {
       throw new Error(jdata.data);
@@ -276,6 +322,10 @@ const updateCatalog = async (path: string, isEnterPath: boolean = true) => {
   } catch (err) {
     ElMessage.error(`${err}`);
   }
+
+  if (status === 203) {
+    store.AuthToken.value = '';
+  }
 };
 
 const handleClick = async (row: Catalog, column: any) => {
@@ -314,11 +364,20 @@ const downloadUrl = (row: Catalog) => {
   return `${config.svraddr}/download?authtoken=${authtoken.value}&&filename=${row.path}`;
 };
 
-const Mkdir = async (pdir: string, dirname: string) => {
-  const url = `${config.svraddr}/mkdir?authtoken=${authtoken.value}&&dirname=${dirname}`;
+const mkdir = async (pdir: string, dirname: string) => {
+  let status = -1;
+  let dir = '';
+  if (pdir === '/') {
+    dir = `/${dirname}`;
+  } else {
+    dir = `${pdir}/${dirname}`;
+  }
+
+  const url = `${config.svraddr}/mkdir?authtoken=${authtoken.value}&&dirname=${dir}`;
 
   try {
     const resp = await fetch(url);
+    status = resp.status;
     const jdata = await resp.json();
     if (jdata.code !== 0) {
       throw new Error(jdata.data);
@@ -332,6 +391,41 @@ const Mkdir = async (pdir: string, dirname: string) => {
     await updateCatalog(pdir);
   } catch (err) {
     ElMessage.error(`${err}`);
+  }
+
+  if (status === 203) {
+    store.AuthToken.value = '';
+  }
+};
+
+const rename = async (oname: string, nname: string) => {
+  let status = -1;
+
+  const curdir = util.GetParentPath(oname);
+  const newname = curdir === '/' ? `/${nname}` : `${curdir}/${nname}`;
+  const url = `${config.svraddr}/rename?authtoken=${authtoken.value}&&oldname=${oname}&&newname=${newname}`;
+  console.log(url);
+
+  try {
+    const resp = await fetch(url);
+    status = resp.status;
+    const jdata = await resp.json();
+    if (jdata.code !== 0) {
+      throw new Error(jdata.data);
+    }
+
+    ElMessage({
+      message: `重命名为${nname}成功!`,
+      type: 'success',
+    });
+
+    await updateCatalog(curdir);
+  } catch (err) {
+    ElMessage.error(`${err}`);
+  }
+
+  if (status === 203) {
+    store.AuthToken.value = '';
   }
 };
 </script>

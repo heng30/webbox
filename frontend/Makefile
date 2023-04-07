@@ -12,10 +12,10 @@ format:
 	npm run format
 
 build-release:
-	@echo "todo"
+	npm run build
 
 download-dependence:
 	npm install
 
 clean:
-	@echo "todo"
+	- rm -rf ./node_modules ./package-lock.json ./dist

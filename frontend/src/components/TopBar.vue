@@ -10,6 +10,7 @@
       border-bottom: 1px solid steelblue;
     "
   >
+   <MkdirDialog :current-dir="currentDir"/>
     <el-page-header title="返回" @back="goBack">
       <template #content>
         <el-breadcrumb :separator-icon="ArrowRight">
@@ -57,9 +58,13 @@
 import { ArrowRight, Plus } from '@element-plus/icons-vue';
 import { watch, ref } from 'vue';
 import store from '../ts/store';
+import MkdirDialog from './MkdirDialog.vue'
+
+const isShowMkdirDialog = store.IsShowMkdirDialog;
 const bitems = store.CurrentPath;
 const isUploading = ref(false);
 const uploadRate = ref(0);
+const currentDir = ref('')
 
 watch(store.UploadProgress, () => {
   if (store.UploadProgress.totalBytes === 0) {
@@ -85,13 +90,12 @@ const goBack = () => {
   bitems.value = bitems.value.slice(0, bitems.value.length - 1);
 };
 
-const handleMkdir = async (dirname: string) => {
-  let pdir: string = '';
+const handleMkdir = () => {
   if (bitems.value.length === 1) {
-    pdir = '/';
+    currentDir.value = '/';
   } else {
-    pdir = bitems.value.join('/').substring(1);
+    currentDir.value = bitems.value.join('/').substring(1);
   }
-  console.log(pdir);
+  isShowMkdirDialog.value = true;
 };
 </script>

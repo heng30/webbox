@@ -29,7 +29,7 @@ func Start() {
 		r.Use(cb)
 	}
 
-	rcbs := []routerCb{ping, login, catalog, upload, mupload, download, mkdir, readdir, deldir, delfile, configure}
+	rcbs := []routerCb{ping, login, catalog, upload, mupload, download, mkdir, rename, readdir, deldir, delfile, configure}
 	for _, cb := range rcbs {
 		cb(r)
 	}
@@ -58,6 +58,10 @@ func errorBody(err error) gin.H {
 }
 
 func getAbsPath(filename string) (string, error) {
+	if !filepath.HasPrefix(filename, "/") {
+		return "", errors.New("Invalid filename: " + filename)
+	}
+
 	path := config.AppConf.RootPath + filename
 	log.Println(path)
 	apath, err := filepath.Abs(path)
