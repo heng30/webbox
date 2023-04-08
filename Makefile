@@ -23,3 +23,11 @@ all:
 
 clean:
 	$(RECURSIVE_CLEAN)
+
+package:
+	rm -rf webbox.tar.gz
+	mkdir webbox
+	cp -rf ./frontend/dist ./webbox/frontend
+	cp -rf ./backend/webbox_* ./webbox
+	tar -zcvf webbox.tar.gz ./webbox
+	rm -rf webbox
