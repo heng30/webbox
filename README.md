@@ -54,7 +54,7 @@
 
     ```
 
-- backend使用nginx进行方向代理
+- backend使用nginx进行反向代理
     - 修改`frontend/src/ts/config.ts`后，重新带包：`npm run build`
     ```
     const prefixpath = '/webbox/api'; // if use proxy_pass for apiserver in nginx, set this variable.
