@@ -28,7 +28,7 @@
     ```
     location /webbox/ {
         proxy_pass http://127.0.0.1:8003/;
-        }
+    }
 
     ```
 
@@ -42,13 +42,13 @@
         index index.html;
 
         location / {
-        try_files $uri $uri/ =404;
+            try_files $uri $uri/ =404;
 
-        # 将index.html中的绝对路径更改为相对路径
-        sub_filter 'src="/' 'src="';
-        sub_filter 'href="/' 'href="';
-        sub_filter_types html;
-        sub_filter_once off;
+            # 将index.html中的绝对路径更改为相对路径
+            sub_filter 'src="/' 'src="';
+            sub_filter 'href="/' 'href="';
+            sub_filter_types html;
+            sub_filter_once off;
         }
     }
 
