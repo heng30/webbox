@@ -1,6 +1,6 @@
 <template>
   <el-dialog v-model="isShow" width="450" title="文件重命名">
-    <el-form :model="form" :rules="rules" label-width="100px">
+    <el-form :model="form" :rules="rules" label-width="100px" @submit.prevent>
       <el-form-item label="新文件名" prop="newname">
         <el-input v-model="form.newname" clearable />
       </el-form-item>
@@ -9,16 +9,15 @@
       slot="footer"
       style="display: flex; align-items: center; justify-content: center"
     >
-      <el-button @click="handleCancel" style="margin: 0 20px">
-        取消
-      </el-button>
+      <el-button @click="handleCancel" style="margin: 0 20px"> 取消 </el-button>
       <el-button type="primary" @click="handleOk"> 确定 </el-button>
     </div>
   </el-dialog>
 </template>
 
 <script lang="ts" setup>
-import { reactive, defineProps } from 'vue';
+import { ElInput, ElForm, ElFormItem, ElButton, ElDialog } from 'element-plus';
+import { reactive } from 'vue';
 import store from '../ts/store';
 
 const props = defineProps({

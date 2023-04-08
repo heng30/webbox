@@ -13,6 +13,7 @@
 </template>
 
 <script setup>
+import { ElButton } from 'element-plus';
 import { ref, onMounted } from 'vue';
 const props = defineProps(['buttonLabel', 'size', 'disabled', 'attach']);
 const emit = defineEmits(['accept']); // 返回文件名和 ArrayBuffer 数据

@@ -10,8 +10,8 @@
       border-bottom: 1px solid steelblue;
     "
   >
-   <MkdirDialog :current-dir="currentDir"/>
-    <el-page-header title="返回" @back="goBack">
+    <MkdirDialog :current-dir="currentDir" />
+    <el-page-header :icon="ArrowLeft" title="返回" @back="goBack">
       <template #content>
         <el-breadcrumb :separator-icon="ArrowRight">
           <el-breadcrumb-item v-for="(item, index) in bitems"
@@ -39,8 +39,13 @@
           :percentage="uploadRate"
         />
       </div>
+
       <div style="display: flex; margin-left: 20px">
-        <el-tooltip content="添加目录" placement="bottom">
+        <el-tooltip
+          content="添加目录"
+          placement="bottom"
+          style="margin-right: 10px"
+        >
           <el-button
             type="primary"
             size="small"
@@ -49,22 +54,41 @@
             @click="handleMkdir"
           />
         </el-tooltip>
+
+        <el-tooltip content="刷新" placement="bottom">
+          <el-button
+            type="primary"
+            size="small"
+            :icon="Refresh"
+            circle
+            @click="handleRefresh"
+          />
+        </el-tooltip>
       </div>
     </div>
   </div>
 </template>
 
 <script lang="ts" setup>
-import { ArrowRight, Plus } from '@element-plus/icons-vue';
+import {
+  ElBreadcrumbItem,
+  ElProgress,
+  ElButton,
+  ElTooltip,
+  ElBreadcrumb,
+  ElPageHeader,
+  ElText,
+} from 'element-plus';
+import { ArrowRight, ArrowLeft, Plus, Refresh } from '@element-plus/icons-vue';
 import { watch, ref } from 'vue';
 import store from '../ts/store';
-import MkdirDialog from './MkdirDialog.vue'
+import MkdirDialog from './MkdirDialog.vue';
 
 const isShowMkdirDialog = store.IsShowMkdirDialog;
 const bitems = store.CurrentPath;
 const isUploading = ref(false);
 const uploadRate = ref(0);
-const currentDir = ref('')
+const currentDir = ref('');
 
 watch(store.UploadProgress, () => {
   if (store.UploadProgress.totalBytes === 0) {
@@ -97,5 +121,16 @@ const handleMkdir = () => {
     currentDir.value = bitems.value.join('/').substring(1);
   }
   isShowMkdirDialog.value = true;
+};
+
+const handleRefresh = () => {
+  let cdir = '';
+  if (bitems.value.length === 1) {
+    cdir = '/';
+  } else {
+    cdir = bitems.value.join('/').substring(1);
+  }
+
+  store.GlobalFunc['refresh'](cdir, false);
 };
 </script>

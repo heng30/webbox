@@ -60,13 +60,18 @@
             >
           </el-button>
 
-          <div style="margin: 0 10px; display: inline-block">
-            <el-button
-              v-if="canDelete"
-              type="danger"
-              @click="handleDelete(scope.$index, scope.row)"
-              >删除</el-button
+          <div
+            v-if="canDelete"
+            style="margin-left: 10px; display: inline-block"
+          >
+            <el-popconfirm
+              title="确定要删除文件?"
+              @confirm="handleDelete(scope.$index, scope.row)"
             >
+              <template #reference>
+                <el-button type="danger">删除</el-button>
+              </template>
+            </el-popconfirm>
           </div>
         </template>
       </el-table-column>
@@ -75,15 +80,23 @@
 </template>
 
 <script lang="ts" setup>
+import {
+  ElTable,
+  ElInput,
+  ElButton,
+  ElPopconfirm,
+  ElTableColumn,
+  ElMessage,
+  ElLink,
+} from 'element-plus';
 import config from '../ts/config';
 import util from '../ts/util';
 import store from '../ts/store';
-import FileDialog from './cbase/FileDialog.vue';
+import FileDialog from './FileDialog.vue';
 import RenameDialog from './RenameDialog.vue';
 
 import { onMounted, computed, ref, watch } from 'vue';
 import { v4 as uuidv4 } from 'uuid';
-import { ElMessage } from 'element-plus';
 
 interface Catalog {
   type: string;
@@ -104,6 +117,8 @@ const canDelete = ref(false);
 const authtoken = store.AuthToken;
 const oldname = ref('');
 const isShowRenameDialog = store.IsShowRenameDialog;
+
+let uploadChunkSize = 1024 * 1024;
 
 const filterTableData = computed(() =>
   tableData.value.filter(
@@ -133,6 +148,7 @@ watch(store.AuthToken, async (newp) => {
 onMounted(async () => {
   store.GlobalFunc['mkdir'] = mkdir;
   store.GlobalFunc['rename'] = rename;
+  store.GlobalFunc['refresh'] = refresh;
 });
 
 const handleRename = async (row: Catalog) => {
@@ -142,7 +158,6 @@ const handleRename = async (row: Catalog) => {
 
 const handleUpload = async (file: any, row: Catalog) => {
   const fileSize = file.size;
-  const chunkSize = 1024 * 1024;
   let startByte: number = 0;
   let chunkNumber: number = 0;
   let status = -1;
@@ -182,7 +197,7 @@ const handleUpload = async (file: any, row: Catalog) => {
 
   let ret = true;
   while (startByte < fileSize) {
-    const endByte = Math.min(startByte + chunkSize, fileSize);
+    const endByte = Math.min(startByte + uploadChunkSize, fileSize);
     ret = await uploadChunk(endByte, ++chunkNumber, endByte == fileSize);
     if (!ret) {
       store.UploadProgress.uploadedBytes -= startByte;
@@ -259,6 +274,10 @@ const updateConfig = async () => {
     }
 
     canDelete.value = jdata.data.canDelete;
+    uploadChunkSize =
+      !!jdata.data.uploadChunkSize && jdata.data.uploadChunkSize > 0
+        ? jdata.data.uploadChunkSize
+        : 1024 * 1024;
   } catch (err) {
     ElMessage.error(`${err}`);
   }
@@ -404,7 +423,6 @@ const rename = async (oname: string, nname: string) => {
   const curdir = util.GetParentPath(oname);
   const newname = curdir === '/' ? `/${nname}` : `${curdir}/${nname}`;
   const url = `${config.svraddr}/rename?authtoken=${authtoken.value}&&oldname=${oname}&&newname=${newname}`;
-  console.log(url);
 
   try {
     const resp = await fetch(url);
@@ -427,5 +445,10 @@ const rename = async (oname: string, nname: string) => {
   if (status === 203) {
     store.AuthToken.value = '';
   }
+};
+
+const refresh = async (dir: string) => {
+  await updateConfig();
+  await updateCatalog(dir);
 };
 </script>

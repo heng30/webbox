@@ -7,7 +7,7 @@
     :close-on-press-escape="false"
     title="欢迎使用WebBox"
   >
-    <el-form :model="form" :rules="rules" label-width="100px">
+    <el-form :model="form" :rules="rules" label-width="100px" @submit.prevent>
       <el-form-item label="用户名" prop="username">
         <el-input v-model="form.username" />
       </el-form-item>
@@ -26,7 +26,14 @@
 </template>
 
 <script lang="ts" setup>
-import { ElMessage } from 'element-plus';
+import {
+  ElInput,
+  ElForm,
+  ElFormItem,
+  ElButton,
+  ElDialog,
+  ElMessage,
+} from 'element-plus';
 import { reactive, ref, watch } from 'vue';
 import md5 from 'js-md5';
 import store from '../ts/store';

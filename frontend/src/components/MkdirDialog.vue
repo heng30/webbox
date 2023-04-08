@@ -1,6 +1,6 @@
 <template>
   <el-dialog v-model="isShow" width="450" title="新建文件夹">
-    <el-form :model="form" :rules="rules" label-width="100px">
+    <el-form :model="form" :rules="rules" label-width="100px" @submit.prevent>
       <el-form-item label="文件名" prop="filename">
         <el-input v-model="form.filename" clearable />
       </el-form-item>
@@ -16,7 +16,8 @@
 </template>
 
 <script lang="ts" setup>
-import { defineProps, reactive } from 'vue';
+import { ElInput, ElForm, ElFormItem, ElButton, ElDialog } from 'element-plus';
+import { reactive } from 'vue';
 import store from '../ts/store';
 
 const props = defineProps({
