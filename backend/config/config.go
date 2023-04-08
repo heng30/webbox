@@ -13,13 +13,14 @@ type Config struct {
 	CanDelete     bool
 	TokenDuration int64
 	RootPath      string
+    UploadChunkSize int
 }
 
 const DB_BAME string = "webbox.db"
 
 var ConfPath, DBPath, CertFile, KeyFile string
 
-var AppConf Config = Config{ListenAddr: ":8002", TestMode: false, EnableTLS: false, CanDelete: false, TokenDuration: 900, RootPath: "/tmp/test"}
+var AppConf Config = Config{ListenAddr: ":8002", TestMode: false, EnableTLS: false, CanDelete: true, TokenDuration: 900, RootPath: "/tmp/test", UploadChunkSize: 4094}
 
 func Init() {
 	home, e := os.LookupEnv("HOME")
