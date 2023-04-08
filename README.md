@@ -23,6 +23,20 @@
     - 修改配置文件`EnableTLS: true`
     - 程序启动会生成默认的证书和私钥文件，放置在`~/.config/webbox/cert.pem` 和 `~/.config/webbox/key.pem`。 默认证书仅支持本地回环地址访问。需要支持外部网络访问需要替换为自己的证书和私钥。
 
+- backend配置说明(`~/.config/webbox/config.json`)
+```
+{
+  "ListenAddr": ":8002", # 监听端口
+  "TestMode": false,     # 测试模式, 开发者专用
+  "EnableTLS": false,    # 是否启用TLS
+  "CanDelete": true,     # 是否可删除文件
+  "TokenDuration": 900,  # 登陆超时，在900秒时间内没有操作，被要求重新登陆
+  "RootPath": "/home/blue/tmp", # 文件根目录
+  "UploadChunkSize": 102400     # 分块上传块大小(字节)
+}
+
+```
+
 - frontend使用nginx进行反向代理：
     - nginx 反向代理配置
     ```
