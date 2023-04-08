@@ -34,7 +34,7 @@ func main() {
 
 func parseArgs() {
     flag.Usage = func() {
-        fmt.Printf("Usage: %s [-qurey=true] | [-add <username,password>] | [del <username>]\n", filepath.Base(os.Args[0]))
+        fmt.Printf("Usage: %s [-query=true] | [-add <username,password>] | [del <username>]\n", filepath.Base(os.Args[0]))
         flag.PrintDefaults()
         fmt.Println()
         fmt.Println("Version:", VERSION)
