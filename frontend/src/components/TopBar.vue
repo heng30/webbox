@@ -125,7 +125,7 @@ const handleMkdir = () => {
 
 const handleRefresh = () => {
   let cdir = '';
-  if (bitems.value.length === 1) {
+  if (bitems.value.length <= 1) {
     cdir = '/';
   } else {
     cdir = bitems.value.join('/').substring(1);
